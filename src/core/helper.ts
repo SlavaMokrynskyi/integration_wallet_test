@@ -155,14 +155,6 @@ export const mint_butch_nft = async (
     const names = nft_metadata.map((m) => m.name);
     const descriptions = nft_metadata.map((m) => m.description);
     const uris = nft_metadata.map((m) => m.uri);
-    console.log(`Minting butch of NFTs`);
-    console.log("cedra ", cedra);
-    console.log("to ", to);
-    console.log("names ", names);
-    console.log("descriptions ", descriptions);
-    console.log("uris ", uris);
-    console.log("nft_metadata ", nft_metadata);
-    console.log("signer ", signer);
 
     const mintTxn = await cedra.transaction.build.simple({
       sender: signer.address,

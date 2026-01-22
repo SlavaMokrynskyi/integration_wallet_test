@@ -1,41 +1,60 @@
-import React, { useState, useEffect } from "react";
-import { mint_butch_nft } from "../core/helper.ts";
-import { Cedra, CedraConfig, Network } from "@cedra-labs/ts-sdk";
+import { useState, useEffect } from "react";
+import {
+  Cedra,
+  CedraConfig,
+  Network,
+  AccountAddress,
+  Account,
+} from "@cedra-labs/ts-sdk";
 
 const CedrumTest = () => {
-  const [account, setAcc] = useState(null);
-  const [cedra, setCedra] = useState(null);
+  const [address, setAddress] = useState<AccountAddress | null>(null);
+  const [alice,setAlice] = useState<Account | null>(null)
+  const [cedra, setCedra] = useState<Cedra | null>(null);
 
   useEffect(() => {
     const cedraInstance = new Cedra(
       new CedraConfig({ network: Network.DEVNET }),
     );
     setCedra(cedraInstance);
+
+    const alice = Account.generate()
+    setAlice(alice);
   }, []);
 
   const handleConnect = async () => {
     if (window.cedrum) {
-      const acc = await window.cedrum.connect();
-      console.log("Connected:", acc);
-      setAcc(acc.address);
+      try {
+        const acc = await window.cedrum.connect();
+        const address = AccountAddress.fromString(acc.address);
+        setAddress(address);
+      } catch (error) {
+        console.error("Connection error:", error);
+        alert("Failed to connect: " + error);
+      }
     }
   };
 
   const handleGetAddress = async () => {
     if (window.cedrum) {
-      const acc = await window.cedrum.account();
-      console.log("Account address:", acc.address);
-      setAcc(acc.address);
+      try {
+        const acc = await window.cedrum.account();
+        console.log("Account address:", acc.address);
+        const address = AccountAddress.fromString(acc.address);
+        setAddress(address);
+      } catch (error) {
+        console.error("Get address error:", error);
+      }
     }
   };
 
-  const handleMint = async () => {
+  const handleTnx = async () => {
     if (!window.cedrum) {
       alert("Please install Cedrum wallet");
       return;
     }
 
-    if (!account) {
+    if (!address) {
       alert("Please connect your wallet first");
       return;
     }
@@ -45,54 +64,41 @@ const CedrumTest = () => {
       return;
     }
 
+    if (!alice) {
+      alert("Alice account not created");
+      return;
+    }
+
     try {
-      // Get the connected account
-      const acc = await window.cedrum.account();
-
-      // Define NFT metadata
-      const nftMetadata = [
-        {
-          name: `My NFT #1 [${Date.now()}]`,
-          description: "First NFT from my dApp",
-          uri: "https://metadata.cedra.dev/v2/genesis-1.json",
-        },
-        {
-          name: `My NFT #2 [${Date.now()}]`,
-          description: "Second NFT from my dApp",
-          uri: "https://metadata.cedra.dev/v2/genesis-2.json",
-        },
-      ];
-
-      console.log("Building mint transaction...");
-
-      // Build the transaction (mint_butch_nft returns a transaction object)
-      const transaction = await mint_butch_nft(
-        cedra,
-        acc, // The wallet will sign this
-        acc.address, // Minting to the connected wallet address
-        nftMetadata,
-      );
-
-      console.log("Signing and submitting transaction...");
-
-      console.log("Transaction : ", transaction);
-
-      // Sign and submit using Cedrum wallet
-      const txn = await window.cedrum.signAndSubmitTransaction(transaction);
-
-      console.log("Transaction submitted:", txn.hash);
-      alert(`Transaction submitted! Hash: ${txn.hash}`);
-
-      // Wait for transaction confirmation
-      const mintRes = await cedra.waitForTransaction({
-        transactionHash: txn.hash,
+      await cedra.fundAccount({
+        accountAddress: alice.accountAddress,
+        amount: 100_000_000
       });
 
-      console.log("Transaction confirmed:", mintRes.hash);
-      alert("NFTs minted successfully!");
+      const payload = {
+        type: "entry_function_payload",
+        function: "0x1::cedra_account::transfer",
+        functionArguments: [
+          alice.accountAddress.toString(), // Convert AccountAddress to string
+          1000
+        ]
+      };
+
+      console.log("Sending payload:", payload);
+
+      const signedTnx = await window.cedrum.signAndSubmitTransaction(payload);
+      const transaction = signedTnx.transaction;
+      console.log("signedTnx", signedTnx);
+
+      const response = await cedra.waitForTransaction({
+        transactionHash: transaction.hash
+      });
+
+      console.log("Transaction response:", response);
+      alert("Transaction successful!");
     } catch (error) {
-      console.error("Minting error:", error);
-      alert("Minting failed: " + error.message);
+      console.error("Tnx error:", error);
+      alert("Tnx failed: " + error);
     }
   };
 
@@ -114,15 +120,15 @@ const CedrumTest = () => {
           Get Address
         </button>
         <button
-          onClick={handleMint}
+          onClick={handleTnx}
           style={{ padding: "10px 20px", cursor: "pointer" }}
-          disabled={!cedra || !account}
+          disabled={!cedra || !address}
         >
-          Mint NFTs
+          Sign and Submit
         </button>
       </div>
       <div>
-        <h2>Account: {account || "Not connected"}</h2>
+        <h2>Account: {address?.toString() || "Not connected"}</h2>
         <p style={{ fontSize: "12px", color: "#666" }}>
           {cedra ? "✓ Cedra SDK initialized" : "Initializing Cedra SDK..."}
         </p>
