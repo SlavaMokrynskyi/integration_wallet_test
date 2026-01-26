@@ -75,18 +75,13 @@ const CedrumTest = () => {
         amount: 100_000_000
       });
 
-      const payload = {
-        type: "entry_function_payload",
-        function: "0x1::cedra_account::transfer",
-        functionArguments: [
-          alice.accountAddress.toString(), // Convert AccountAddress to string
-          1000
-        ]
-      };
-
-      console.log("Sending payload:", payload);
-
-      const signedTnx = await window.cedrum.signAndSubmitTransaction(payload);
+      const signedTnx = await window.cedrum.signAndSubmitTransaction({
+        sender: address,
+        data: {
+          function: "0x1::cedra_account::transfer",
+          functionArguments: [alice.accountAddress, 10000],
+        }
+      });
       const transaction = signedTnx.transaction;
       console.log("signedTnx", signedTnx);
 
