@@ -102,23 +102,14 @@ const CedrumTest = () => {
     }
 
     try {
-      await cedra.fundAccount({
-        accountAddress: alice.accountAddress,
-        amount: 100_000_000
-      });
-
       const submittedTnx = await window.cedrum.signAndSubmitTransaction({
-        sender: address,
         data: {
           function: "0x1::cedra_account::transfer",
           functionArguments: [alice.accountAddress.toString(), 10000],
         }
       });
-      const transaction = submittedTnx.transaction;
-      console.log("submittedTnx", submittedTnx);
-
       const response = await cedra.waitForTransaction({
-        transactionHash: transaction.hash
+        transactionHash: submittedTnx.hash
       });
 
       console.log("Transaction response:", response);
@@ -151,7 +142,6 @@ const CedrumTest = () => {
     try {
 
       const response = await window.cedrum.signTransaction({
-        sender: address,
         data: {
           function: "0x1::cedra_account::transfer",
           functionArguments: [alice.accountAddress.toString(), 10000],
